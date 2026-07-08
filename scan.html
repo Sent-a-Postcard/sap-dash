@@ -42,6 +42,7 @@ button.ghost { background:var(--card); color:var(--txt); border:1px solid var(--
   <div class="tab" data-m="receive" onclick="setMode('receive')">📥 Receive</div>
   <div class="tab" data-m="count" onclick="setMode('count')">🔢 Count</div>
   <div class="tab" data-m="lookup" onclick="setMode('lookup')">🔍 Check</div>
+  <div class="tab" data-m="inspect" onclick="setMode('inspect')">🔁 Return</div>
 </div>
 <main>
   <input id="scanbox" placeholder="scan barcode…" autocomplete="off" autocapitalize="characters">
@@ -72,11 +73,16 @@ async function api(payload){
   if (r.status === 401){ localStorage.removeItem("sap_key"); KEY=""; boot(); throw new Error("bad key"); }
   return r.json();
 }
+function bigId(design, size, name){
+  return `<div style="display:flex;align-items:baseline;gap:14px"><span style="font-size:44px;font-weight:900">${design ?? ""}</span><span style="font-size:36px;font-weight:900;color:var(--accent)">${size ?? ""}</span><span style="font-size:12px;color:var(--dim)">${name ?? ""}</span></div>`;
+}
+function codeParts(sku){ return { design: sku.sku_code?.split("__")[0], size: sku.size }; }
 const HINTS = {
   verify: "Scan/type the ORDER number first (e.g. SP1188), then scan each shirt.",
   receive: "Scan a shirt's barcode — 1 scan = 1 piece received into stock (ledger + website).",
   count: "Scan a shirt's barcode, then type how many you counted on the shelf.",
   lookup: "Scan anything to see what it is and how many are in stock.",
+  inspect: "Return parcel aaya? Scan the OLD label on the parcel (AWB) — then tick ✅ good or ✖ kharab for each piece.",
 };
 function setMode(m){
   MODE = m; packOrder = null; packExpected = []; packScanned = [];
@@ -105,7 +111,7 @@ async function handleScan(v){
       const r = await api({action:"lookup", code:v});
       if (!r.found){ beep(false); return show(`<div class="card bad big">Unknown code: ${v}</div>`); }
       beep(true);
-      show(`<div class="card"><div class="big">${r.sku.name}</div><div class="row"><span>In stock (sellable)</span><b>${r.available}</b></div><div class="row"><span>Code</span><span>${r.sku.sku_code}</span></div></div>`);
+      show(`<div class="card">${bigId(codeParts(r.sku).design, r.sku.size, r.sku.name)}<div class="row"><span>In stock (sellable)</span><b>${r.available}</b></div></div>`);
     }
     if (MODE === "receive"){
       const r = await api({action:"receive", code:v, qty:1});
@@ -151,7 +157,33 @@ async function handleScan(v){
         }
       }
     }
+    if (MODE === "inspect"){
+      const r = await api({action:"inspect", order:v});
+      if (!r.found){ beep(false); return show(`<div class="card bad big">Parcel/order not found: ${v}</div>`); }
+      if (!r.items.length){ beep(false); return show(`<div class="card"><div class="big">${r.order}</div><div class="hint">Nothing waiting for inspection on this order. Call Aditya if a parcel is in hand.</div></div>`); }
+      beep(true);
+      show(`<div class="card"><div class="big">${r.order} · ${r.customer}</div>${r.items.map(i=>`
+        <div style="margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px" id="insp-${i.code}">
+          ${bigId(i.design, i.size, i.name)}
+          <div style="display:flex;gap:10px;margin-top:10px">
+            <button class="act" style="margin:0" onclick="inspectVerdict('${r.order}','${i.code}','good')">✅ THIK HAI</button>
+            <button class="act" style="margin:0;background:var(--bad);color:#fff" onclick="inspectVerdict('${r.order}','${i.code}','bad')">✖ KHARAB</button>
+          </div>
+        </div>`).join("")}</div>`);
+    }
   } catch(e){ show(`<div class="card bad">error: ${e.message}</div>`); }
+}
+async function inspectVerdict(order, code, verdict){
+  try {
+    const r = await api({action:"inspect_result", order, code, verdict});
+    const el = document.getElementById("insp-"+code);
+    if (r.ok){
+      beep(verdict === "good");
+      el.innerHTML = verdict === "good"
+        ? `<span class="pill ok">WAPAS STOCK ME ✓</span> <span class="hint">${r.sku} — stock now ${r.available}, website updated</span>`
+        : `<span class="pill bad">KHARAB — HATA DIYA</span> <span class="hint">${r.sku} written off</span>`;
+    } else { el.innerHTML = `<span class="pill bad">error: ${r.error}</span>`; }
+  } catch(e){ alert(e.message); }
 }
 setInterval(()=>{ if (KEY && document.activeElement !== $("scanbox") && !document.querySelector("#keywrap:not([style*='none'])")) $("scanbox")?.focus(); }, 3000);
 boot();
