@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111113">
+<title>Sent a Postcard — Ops</title>
+<style>
+:root{
+  --bg:#111113; --card:#1b1b1f; --card2:#232329; --line:#2c2c33;
+  --txt:#f2f1ec; --mut:#9b9a93; --dim:#6d6c66;
+  --brand:#e8b64c; --ok:#5fd39a; --warn:#f0a35e; --bad:#ef6b6b; --info:#7fb5f2;
+  --r:14px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--txt);font-family:-apple-system,'Inter',system-ui,sans-serif;font-size:15px;line-height:1.45;padding-bottom:84px}
+.wrap{max-width:1060px;margin:0 auto;padding:0 16px}
+header{padding:22px 0 8px}
+header h1{font-size:19px;font-weight:650;letter-spacing:.2px}
+header h1 span{color:var(--brand)}
+.asof{color:var(--dim);font-size:12px;margin-top:2px}
+.asof b{color:var(--mut);font-weight:500;cursor:pointer}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0 4px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.card .l{font-size:11.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.6px}
+.card .v{font-size:26px;font-weight:680;margin:3px 0 1px;font-variant-numeric:tabular-nums}
+.card .s{font-size:12px;color:var(--dim)}
+.card.hot{border-color:#5a3535;background:#241b1b}
+.card.hot .v{color:var(--bad)}
+section{margin:22px 0}
+h2{font-size:13px;font-weight:600;color:var(--mut);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+.item{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.item .main{min-width:0}
+.item .t{font-weight:560;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .d{color:var(--mut);font-size:12.5px;margin-top:1px}
+.pill{flex:none;font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:99px;white-space:nowrap}
+.p-ok{background:#1c3529;color:var(--ok)} .p-bad{background:#3a2020;color:var(--bad)}
+.p-warn{background:#3a2c1c;color:var(--warn)} .p-info{background:#1d2c3d;color:var(--info)}
+.p-mut{background:var(--card2);color:var(--mut)}
+.empty{color:var(--dim);font-size:13.5px;padding:18px;text-align:center;background:var(--card);border:1px dashed var(--line);border-radius:var(--r)}
+.bar{height:6px;background:var(--card2);border-radius:4px;overflow:hidden;margin-top:7px}
+.bar i{display:block;height:100%;border-radius:4px}
+.srow{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:11px 14px;margin-bottom:7px}
+.srow .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.srow .nm{font-weight:560;font-size:14px}
+.srow .qty{font-variant-numeric:tabular-nums;font-size:13px;color:var(--mut)}
+.qty b{color:var(--txt);font-size:15px}
+.grp{margin-bottom:18px}
+.grp h3{font-size:14px;font-weight:620;margin:14px 0 8px;color:var(--txt)}
+.grp h3 small{color:var(--dim);font-weight:400;font-size:12px}
+nav{position:fixed;bottom:0;left:0;right:0;background:rgba(17,17,19,.92);backdrop-filter:blur(14px);border-top:1px solid var(--line);display:flex;padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
+nav button{flex:1;background:none;border:0;color:var(--dim);font-size:11px;font-weight:600;padding:8px 2px;cursor:pointer;border-radius:10px;font-family:inherit}
+nav button .ic{display:block;font-size:19px;margin-bottom:2px}
+nav button.on{color:var(--brand)}
+#gate{max-width:400px;margin:18vh auto;padding:28px;background:var(--card);border:1px solid var(--line);border-radius:18px;text-align:center}
+#gate h1{font-size:20px;margin-bottom:4px} #gate p{color:var(--mut);font-size:13px;margin-bottom:16px}
+#gate input{width:100%;padding:13px;font-size:16px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--txt);text-align:center}
+#gate button{margin-top:10px;width:100%;padding:13px;font-size:15px;font-weight:600;border:0;border-radius:10px;background:var(--brand);color:#111;cursor:pointer}
+.view{display:none}.view.on{display:block}
+.skel{color:var(--dim);text-align:center;padding:40px 0}
+</style>
+</head>
+<body>
+<div id="gate" hidden>
+  <h1>Sent a Postcard <span style="color:var(--brand)">Ops</span></h1>
+  <p>Paste your dashboard key — stays on this device.</p>
+  <input id="keyin" placeholder="dashboard key" autocomplete="off">
+  <button onclick="saveKey()">Open</button>
+</div>
+
+<div id="app" hidden class="wrap">
+  <header>
+    <h1>Sent a Postcard <span>Ops</span></h1>
+    <div class="asof" id="asof">loading…</div>
+  </header>
+
+  <div id="v-today" class="view on">
+    <div class="cards" id="cards"></div>
+    <section><h2>Needs you</h2><div id="needs"></div></section>
+    <section><h2>Latest orders (72h)</h2><div id="orders"></div></section>
+  </div>
+
+  <div id="v-parcels" class="view">
+    <section><h2>Problem parcels</h2><div id="problems"></div></section>
+    <section><h2>Moving</h2><div id="moving"></div></section>
+    <section><h2>Waiting for pickup</h2><div id="waiting"></div></section>
+  </div>
+
+  <div id="v-stock" class="view">
+    <section><h2>Stock — products</h2><div id="stock"></div></section>
+    <section><h2>Packaging</h2><div id="pkg"></div></section>
+  </div>
+
+  <div id="v-returns" class="view">
+    <section><h2>Inspection queue</h2><div id="insp"></div></section>
+    <section><h2>System alerts</h2><div id="alerts"></div></section>
+  </div>
+
+  <nav>
+    <button data-v="today" class="on"><span class="ic">🏠</span>Today</button>
+    <button data-v="parcels"><span class="ic">🚚</span>Parcels</button>
+    <button data-v="stock"><span class="ic">📦</span>Stock</button>
+    <button data-v="returns"><span class="ic">🔄</span>Returns</button>
+  </nav>
+</div>
+
+<script>
+const API="https://evxogfucxkhjmflxtshl.supabase.co/functions/v1/stock-page";
+const qs=new URLSearchParams(location.search);
+if(qs.get("key")){localStorage.setItem("sap_key",qs.get("key"));history.replaceState({},"",location.pathname);}
+const KEY=()=>localStorage.getItem("sap_key");
+function saveKey(){localStorage.setItem("sap_key",document.getElementById("keyin").value.trim());load();}
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("nav button").forEach(x=>x.classList.remove("on"));
+  document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on");document.getElementById("v-"+b.dataset.v).classList.add("on");
+  window.scrollTo(0,0);
+});
+const el=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]));
+const inr=n=>"₹"+Math.round(n).toLocaleString("en-IN");
+const item=(t,d,pill,cls)=>`<div class="item"><div class="main"><div class="t">${t}</div><div class="d">${d}</div></div><span class="pill ${cls}">${pill}</span></div>`;
+const RETURNISH=/rto|return/i;
+
+async function load(){
+  if(!KEY()){el("gate").hidden=false;el("app").hidden=true;return;}
+  let d;
+  try{
+    const r=await fetch(API+"?key="+encodeURIComponent(KEY()));
+    if(r.status===401){localStorage.removeItem("sap_key");el("gate").hidden=false;el("app").hidden=true;return;}
+    d=await r.json();
+  }catch(e){el("asof").textContent="network error — tap to retry";return;}
+  render(d);
+}
+function render(d){
+  el("gate").hidden=true;el("app").hidden=false;
+  const ist=new Date(new Date(d.generated_at).getTime()+5.5*36e5).toISOString().slice(5,16).replace("T"," · ");
+  el("asof").innerHTML=`updated ${ist} IST — <b onclick="load()">refresh</b>`;
+
+  const map={};for(const p of d.pos)(map[p.sku_id]??={})[p.state]=+p.units;
+  const prods=d.skus.filter(s=>s.sku_type==="product");
+  const av=id=>(map[id]?.AVAILABLE??0);
+
+  // ---- TODAY ----
+  const day=new Date();day.setHours(day.getHours()+5.5);const today=day.toISOString().slice(0,10);
+  const real=d.orders72.filter(o=>!o.is_test&&!["CANCELLED","TEST"].includes(o.status));
+  const todays=real.filter(o=>new Date(new Date(o.created_at).getTime()+5.5*36e5).toISOString().slice(0,10)===today);
+  const rev=todays.reduce((s,o)=>s+(+o.total||0),0);
+  const fwd=d.ships.filter(s=>s.direction==="FORWARD");
+  const moving=fwd.filter(s=>["IN TRANSIT","DISPATCHED"].includes((s.current_status||"").toUpperCase())&&!RETURNISH.test(s.current_status||""));
+  const ndr=fwd.filter(s=>s.ndr_flagged_at&&!["DELIVERED","RTO"].includes((s.current_status||"").toUpperCase()));
+  const out=prods.filter(s=>av(s.id)<=0),low=prods.filter(s=>{const a=av(s.id);return a>0&&a<6});
+  const inspN=d.inspection.reduce((s,i)=>s+(+i.qty||0),0);
+
+  el("cards").innerHTML=
+    `<div class="card"><div class="l">Orders today</div><div class="v">${todays.length}</div><div class="s">${todays.filter(o=>o.payment_mode==="COD").length} COD</div></div>`+
+    `<div class="card"><div class="l">Revenue today</div><div class="v">${inr(rev)}</div><div class="s">booked</div></div>`+
+    `<div class="card"><div class="l">Parcels moving</div><div class="v">${moving.length}</div><div class="s">of ${fwd.length} tracked</div></div>`+
+    `<div class="card ${ndr.length?"hot":""}"><div class="l">NDR</div><div class="v">${ndr.length}</div><div class="s">${ndr.length?"call today":"clear"}</div></div>`+
+    `<div class="card ${out.length?"hot":""}"><div class="l">Out of stock</div><div class="v">${out.length}</div><div class="s">${low.length} running low</div></div>`+
+    `<div class="card ${inspN?"hot":""}"><div class="l">Inspection</div><div class="v">${inspN}</div><div class="s">units waiting</div></div>`;
+
+  let needs="";
+  for(const s of ndr) needs+=item(`Call ${esc(s.orders?.customer_name)} — ${esc(s.orders?.order_number)}`,`NDR: ${esc(s.ndr_reason||"delivery failed")} · ${esc(s.orders?.city||"")}`,"₹640 at stake","p-bad");
+  for(const i of d.inspection) needs+=item(`Inspect ${esc(i.name)} ×${i.qty}`,`returned on ${esc(i.order_number)} · waiting ${i.days_waiting}d`,"restock or write-off","p-warn");
+  if(out.length) needs+=item(`${out.length} SKUs sold out`,out.slice(0,4).map(s=>esc(s.name)).join(", ")+(out.length>4?"…":""),"check ads","p-warn");
+  for(const a of d.alerts.slice(0,4)) if(!["ndr","rto_received"].includes(a.job)) needs+=item(esc(a.job),esc(JSON.stringify(a.detail).slice(0,90)),"system","p-mut");
+  el("needs").innerHTML=needs||`<div class="empty">Nothing needs you right now. 🌴</div>`;
+
+  el("orders").innerHTML=real.slice(0,12).map(o=>
+    item(`${esc(o.order_number)} — ${esc(o.customer_name)}`,`${esc(o.city||"")} · ${new Date(new Date(o.created_at).getTime()+5.5*36e5).toISOString().slice(5,16).replace("T"," ")}`,
+      `${o.payment_mode==="COD"?"COD ":""}${inr(o.total)}`,o.payment_mode==="COD"?"p-warn":"p-ok")).join("")||`<div class="empty">No orders in 72h</div>`;
+
+  // ---- PARCELS ----
+  const badStates=fwd.filter(s=>RETURNISH.test(s.current_status||"")||s.ndr_flagged_at);
+  el("problems").innerHTML=badStates.map(s=>
+    item(`${esc(s.orders?.order_number||s.awb)} — ${esc(s.orders?.customer_name||"")}`,
+      `${esc(s.awb)} · ${esc(s.orders?.city||"")}${s.ndr_reason?" · "+esc(s.ndr_reason):""}`,
+      esc(s.current_status||"?"),"p-bad")).join("")||`<div class="empty">No RTO / NDR parcels 🎉</div>`;
+  el("moving").innerHTML=moving.slice(0,40).map(s=>
+    item(`${esc(s.orders?.order_number||s.awb)} — ${esc(s.orders?.customer_name||"")}`,
+      `${esc(s.awb)} · ${esc(s.orders?.city||"")} · last scan ${s.last_scan_at?new Date(new Date(s.last_scan_at).getTime()+5.5*36e5).toISOString().slice(5,16).replace("T"," "):"—"}`,
+      s.orders?.payment_mode==="COD"?"COD "+inr(s.orders?.total||0):"prepaid","p-info")).join("")||`<div class="empty">Nothing in transit</div>`;
+  const waiting=fwd.filter(s=>["MANIFESTED","READY_FOR_PICKUP","BACKFILL","DISPATCHED"].includes((s.current_status||"").toUpperCase())&&(s.current_status||"").toUpperCase()!=="DISPATCHED");
+  el("waiting").innerHTML=waiting.map(s=>
+    item(`${esc(s.orders?.order_number||s.awb)} — ${esc(s.orders?.customer_name||"")}`,`${esc(s.awb)} · manifested, no pickup scan yet`,
+      esc(s.courier||"DELHIVERY"),"p-mut")).join("")||`<div class="empty">Nothing waiting</div>`;
+
+  // ---- STOCK ----
+  const byDesign={};
+  for(const s of prods)(byDesign[s.design_number]??=[]).push(s);
+  let sh="";
+  for(const dn of Object.keys(byDesign).sort((a,b)=>a-b)){
+    const list=byDesign[dn];
+    const dname=list[0].name.replace(/\s*\(.*\)/,"");
+    const tot=list.reduce((t,s)=>t+av(s.id),0);
+    const inc=list.reduce((t,s)=>t+(map[s.id]?.ON_ORDER??0),0);
+    sh+=`<div class="grp"><h3>${esc(dname)} <small>${tot} on shelf${inc?` · ${inc} incoming`:""}</small></h3>`;
+    for(const s of list.sort((a,b)=>["S","M","L","XL","XXL"].indexOf(a.size)-["S","M","L","XL","XXL"].indexOf(b.size))){
+      const a=av(s.id),o=map[s.id]?.ON_ORDER??0;
+      const col=a<=0?"var(--bad)":a<6?"var(--warn)":"var(--ok)";
+      sh+=`<div class="srow"><div class="top"><span class="nm">${esc(s.size)}</span><span class="qty"><b>${a}</b>${o?` <span style="color:var(--info)">+${o} coming</span>`:""}</span></div>
+      <div class="bar"><i style="width:${Math.min(100,a*8)}%;background:${col}"></i></div></div>`;
+    }
+    sh+=`</div>`;
+  }
+  el("stock").innerHTML=sh;
+  el("pkg").innerHTML=d.skus.filter(s=>s.sku_type==="packaging").map(s=>{
+    const a=av(s.id);
+    return `<div class="srow"><div class="top"><span class="nm">${esc(s.name)}</span><span class="qty"><b>${a}</b></span></div></div>`;
+  }).join("");
+
+  // ---- RETURNS ----
+  el("insp").innerHTML=d.inspection.map(i=>
+    item(`${esc(i.name)} ×${i.qty}`,`order ${esc(i.order_number)} · arrived ${new Date(i.arrived_at).toISOString().slice(5,10)} · waiting ${i.days_waiting}d`,
+      "judge it","p-warn")).join("")||`<div class="empty">Queue empty — nothing to inspect</div>`;
+  el("alerts").innerHTML=d.alerts.map(a=>
+    item(esc(a.job),esc(JSON.stringify(a.detail).slice(0,110)),new Date(a.created_at).toISOString().slice(5,10),"p-mut")).join("")||`<div class="empty">No alerts</div>`;
+}
+load();
+setInterval(load,10*60*1000);
+</script>
+</body>
+</html>
