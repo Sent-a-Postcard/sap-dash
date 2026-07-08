@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>SAP Scan Station</title>
+<style>
+:root { --bg:#0d0f12; --card:#171a1f; --line:#2a2e35; --txt:#e8eaed; --dim:#9aa0a8;
+        --ok:#22c55e; --bad:#ef4444; --accent:#f59e0b; }
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body { background:var(--bg); color:var(--txt); font-family:-apple-system,Roboto,sans-serif; min-height:100vh; }
+header { padding:14px 16px 8px; font-weight:800; font-size:18px; }
+header small { color:var(--dim); font-weight:400; }
+.tabs { display:flex; gap:6px; padding:8px 12px; }
+.tab { flex:1; text-align:center; padding:12px 4px; background:var(--card); border:1px solid var(--line);
+       border-radius:10px; font-weight:700; font-size:14px; color:var(--dim); }
+.tab.on { color:#0d0f12; background:var(--accent); border-color:var(--accent); }
+main { padding:12px 16px; }
+input, button { font-size:18px; border-radius:12px; }
+#scanbox { width:100%; padding:16px; background:var(--card); border:2px solid var(--accent); color:var(--txt);
+           outline:none; font-size:22px; letter-spacing:1px; }
+.hint { color:var(--dim); font-size:13px; margin:8px 2px; }
+#result { margin-top:14px; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:10px; }
+.big { font-size:26px; font-weight:800; }
+.ok { color:var(--ok); } .bad { color:var(--bad); }
+.row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed var(--line); font-size:16px; }
+.row:last-child { border:none; }
+button.act { width:100%; padding:16px; margin-top:10px; font-weight:800; border:none; background:var(--ok); color:#04110a; }
+button.ghost { background:var(--card); color:var(--txt); border:1px solid var(--line); }
+#keywrap { padding:40px 20px; }
+.pill { display:inline-block; padding:2px 10px; border-radius:99px; font-size:12px; font-weight:700; }
+.pill.ok { background:#052e16; } .pill.bad { background:#450a0a; }
+</style></head><body>
+<header>📦 SAP Scan Station <small id="mode-label"></small></header>
+<div id="keywrap" style="display:none">
+  <p style="margin-bottom:12px">Enter the station key (one time on this device):</p>
+  <input id="keyinput" style="width:100%;padding:14px;background:var(--card);border:1px solid var(--line);color:var(--txt)">
+  <button class="act" onclick="saveKey()">Save</button>
+</div>
+<div id="app" style="display:none">
+<div class="tabs">
+  <div class="tab" data-m="verify" onclick="setMode('verify')">✅ Pack</div>
+  <div class="tab" data-m="receive" onclick="setMode('receive')">📥 Receive</div>
+  <div class="tab" data-m="count" onclick="setMode('count')">🔢 Count</div>
+  <div class="tab" data-m="lookup" onclick="setMode('lookup')">🔍 Check</div>
+</div>
+<main>
+  <input id="scanbox" placeholder="scan barcode…" autocomplete="off" autocapitalize="characters">
+  <div class="hint" id="hint"></div>
+  <div id="result"></div>
+</main>
+</div>
+<script>
+const FN = "https://evxogfucxkhjmflxtshl.supabase.co/functions/v1/scan-station";
+const $ = id => document.getElementById(id);
+let KEY = localStorage.getItem("sap_key") || "";
+let MODE = "verify";
+let packOrder = null, packExpected = [], packScanned = [];
+const DEVICE = localStorage.getItem("sap_device") || (() => {
+  const d = "dev-" + Math.random().toString(36).slice(2, 7);
+  localStorage.setItem("sap_device", d); return d; })();
+
+function saveKey(){ KEY = $("keyinput").value.trim(); localStorage.setItem("sap_key", KEY); boot(); }
+function boot(){
+  $("keywrap").style.display = KEY ? "none" : "block";
+  $("app").style.display = KEY ? "block" : "none";
+  if (KEY) { setMode(MODE); }
+}
+async function api(payload){
+  const r = await fetch(`${FN}?key=${encodeURIComponent(KEY)}`, {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({...payload, device: DEVICE})});
+  if (r.status === 401){ localStorage.removeItem("sap_key"); KEY=""; boot(); throw new Error("bad key"); }
+  return r.json();
+}
+const HINTS = {
+  verify: "Scan/type the ORDER number first (e.g. SP1188), then scan each shirt.",
+  receive: "Scan a shirt's barcode — 1 scan = 1 piece received into stock (ledger + website).",
+  count: "Scan a shirt's barcode, then type how many you counted on the shelf.",
+  lookup: "Scan anything to see what it is and how many are in stock.",
+};
+function setMode(m){
+  MODE = m; packOrder = null; packExpected = []; packScanned = [];
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("on", t.dataset.m === m));
+  $("mode-label").textContent = "· " + m;
+  $("hint").textContent = HINTS[m];
+  $("result").innerHTML = "";
+  const sb = $("scanbox"); sb.value = ""; sb.placeholder = m === "verify" ? "scan order no. (SPxxxx)…" : "scan barcode…"; sb.focus();
+}
+function show(html){ $("result").innerHTML = html + $("result").innerHTML; }
+function beep(good){
+  const ctx = new (window.AudioContext||window.webkitAudioContext)();
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  o.frequency.value = good ? 880 : 220; g.gain.value = 0.3;
+  o.start(); setTimeout(()=>{o.stop();ctx.close();}, good?120:400);
+}
+$("scanbox") && document.addEventListener("keydown", e => {
+  if (e.key === "Enter" && document.activeElement === $("scanbox")) handleScan($("scanbox").value.trim());
+});
+async function handleScan(v){
+  if (!v) return;
+  $("scanbox").value = "";
+  try {
+    if (MODE === "lookup"){
+      const r = await api({action:"lookup", code:v});
+      if (!r.found){ beep(false); return show(`<div class="card bad big">Unknown code: ${v}</div>`); }
+      beep(true);
+      show(`<div class="card"><div class="big">${r.sku.name}</div><div class="row"><span>In stock (sellable)</span><b>${r.available}</b></div><div class="row"><span>Code</span><span>${r.sku.sku_code}</span></div></div>`);
+    }
+    if (MODE === "receive"){
+      const r = await api({action:"receive", code:v, qty:1});
+      if (!r.ok){ beep(false); return show(`<div class="card bad big">❌ ${r.error||"failed"} (${v})</div>`); }
+      beep(true);
+      show(`<div class="card"><span class="pill ok">RECEIVED +1</span><div class="big">${r.sku}</div><div class="row"><span>Stock now</span><b>${r.available}</b></div><div class="row"><span>Website</span><span>${r.shopify}</span></div></div>`);
+    }
+    if (MODE === "count"){
+      const r = await api({action:"lookup", code:v});
+      if (!r.found){ beep(false); return show(`<div class="card bad big">Unknown code: ${v}</div>`); }
+      beep(true);
+      const counted = prompt(`${r.sku.name}\nLedger says: ${r.available}\n\nHow many did you COUNT?`);
+      if (counted === null) return;
+      const c = await api({action:"count", code:v, counted:Number(counted)});
+      const good = c.diff === 0;
+      beep(good);
+      show(`<div class="card"><span class="pill ${good?'ok':'bad'}">${good?'MATCH ✓':'MISMATCH: '+(c.diff>0?'+':'')+c.diff}</span><div class="big">${c.sku}</div><div class="row"><span>Counted</span><b>${c.counted}</b></div><div class="row"><span>Ledger</span><b>${c.ledger}</b></div>${good?'':'<div class="hint">Logged — Aditya/Claude will review before adjusting.</div>'}</div>`);
+    }
+    if (MODE === "verify"){
+      if (!packOrder){
+        const r = await api({action:"verify", order:v});
+        if (!r.found){ beep(false); return show(`<div class="card bad big">Order not found: ${v}</div>`); }
+        packOrder = r.order; packExpected = []; packScanned = [];
+        r.items.forEach(i => { for(let k=0;k<i.qty;k++) packExpected.push(i.code); });
+        beep(true);
+        $("scanbox").placeholder = "now scan each shirt…";
+        show(`<div class="card"><div class="big">${r.order.order_number} · ${r.order.customer_name}</div>${r.items.map(i=>`<div class="row"><span>${i.name}</span><b>×${i.qty}</b></div>`).join("")}<div class="hint">Scan each piece now.</div></div>`);
+      } else {
+        const idx = packExpected.indexOf(v);
+        if (idx === -1){
+          beep(false);
+          await api({action:"verify_result", order:packOrder.order_number, pass:false, scans:[...packScanned, v]});
+          show(`<div class="card"><span class="pill bad">WRONG ITEM ✋</span><div class="big bad">${v} is NOT in ${packOrder.order_number}</div><div class="hint">Put it back. Expected: ${packExpected.join(", ") || "nothing more"}</div></div>`);
+          return;
+        }
+        packExpected.splice(idx,1); packScanned.push(v); beep(true);
+        if (packExpected.length === 0){
+          await api({action:"verify_result", order:packOrder.order_number, pass:true, scans:packScanned});
+          show(`<div class="card"><span class="pill ok">PACK COMPLETE ✓</span><div class="big ok">${packOrder.order_number} verified — seal it 📦</div></div>`);
+          packOrder = null; $("scanbox").placeholder = "scan order no. (SPxxxx)…";
+        } else {
+          show(`<div class="card"><span class="pill ok">✓ ${v}</span> <span class="hint">${packExpected.length} piece(s) left</span></div>`);
+        }
+      }
+    }
+  } catch(e){ show(`<div class="card bad">error: ${e.message}</div>`); }
+}
+setInterval(()=>{ if (KEY && document.activeElement !== $("scanbox") && !document.querySelector("#keywrap:not([style*='none'])")) $("scanbox")?.focus(); }, 3000);
+boot();
+</script>
+</body></html>
