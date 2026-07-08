@@ -79,7 +79,7 @@ function bigId(design, size, name){
 function codeParts(sku){ return { design: sku.sku_code?.split("__")[0], size: sku.size }; }
 const HINTS = {
   verify: "Scan/type the ORDER number first (e.g. SP1188), then scan each shirt.",
-  receive: "Scan a shirt's barcode — 1 scan = 1 piece received into stock (ledger + website).",
+  receive: "Naya maal aaya? Shirt haath me lo → NEECHE uski PHOTO pe tap karo → size pe tap karo. (Ya barcode scan karo, dono chalta hai.)",
   count: "Scan a shirt's barcode, then type how many you counted on the shelf.",
   lookup: "Scan anything to see what it is and how many are in stock.",
   inspect: "Return parcel aaya? Scan the OLD label on the parcel (AWB) — then tick ✅ good or ✖ kharab for each piece.",
@@ -90,6 +90,7 @@ function setMode(m){
   $("mode-label").textContent = "· " + m;
   $("hint").textContent = HINTS[m];
   $("result").innerHTML = "";
+  if (m === "receive") loadDesignGrid();
   const sb = $("scanbox"); sb.value = ""; sb.placeholder = m === "verify" ? "scan order no. (SPxxxx)…" : "scan barcode…"; sb.focus();
 }
 function show(html){ $("result").innerHTML = html + $("result").innerHTML; }
@@ -172,6 +173,41 @@ async function handleScan(v){
         </div>`).join("")}</div>`);
     }
   } catch(e){ show(`<div class="card bad">error: ${e.message}</div>`); }
+}
+async function loadDesignGrid(){
+  let d = null;
+  try { const c = JSON.parse(localStorage.getItem("sap_designs")||"null");
+        if (c && Date.now()-c.t < 3600e3) d = c.designs; } catch(e){}
+  if (!d){ const r = await api({action:"designs"}); d = r.designs;
+           localStorage.setItem("sap_designs", JSON.stringify({t:Date.now(), designs:d})); }
+  const SZ = ["S","M","L","XL","XXL"];
+  $("result").innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px">` +
+    d.map(x=>`<div class="card" style="padding:8px;margin:0;text-align:center" onclick="pickDesign(${x.number})" id="dg-${x.number}">
+      ${x.image?`<img src="${x.image}" style="width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:8px">`:""}
+      <div style="font-size:32px;font-weight:900;margin-top:4px">${x.number}</div>
+      <div class="hint" style="margin:0">${x.name}</div>
+      <div id="sz-${x.number}" style="display:none;gap:6px;margin-top:8px;flex-wrap:wrap;justify-content:center">
+        ${SZ.filter(z=>x.sizes.includes(z)).map(z=>`<button class="act" style="margin:0;width:auto;padding:12px 14px;font-size:18px" onclick="event.stopPropagation();receiveTap(${x.number},'${z}')">${z}</button>`).join("")}
+      </div>
+    </div>`).join("") + `</div>`;
+}
+function pickDesign(n){
+  document.querySelectorAll("[id^='sz-']").forEach(e=>e.style.display="none");
+  const el = $("sz-"+n); if (el) el.style.display="flex";
+}
+async function receiveTap(design, size){
+  const code = `${design}__${size}`;
+  const r = await api({action:"receive", code, qty:1});
+  if (!r.ok){ beep(false); return alert("failed: "+(r.error||"")); }
+  beep(true);
+  const el = $("dg-"+design);
+  el.style.outline = "3px solid var(--ok)";
+  setTimeout(()=>{ el.style.outline=""; }, 600);
+  const old = document.getElementById("rcv-toast"); if (old) old.remove();
+  const t = document.createElement("div"); t.id = "rcv-toast";
+  t.style = "position:fixed;bottom:14px;left:14px;right:14px;background:#052e16;border:1px solid var(--ok);border-radius:12px;padding:12px;font-weight:800;font-size:18px;z-index:9";
+  t.innerHTML = `✓ ${design} · ${size} &nbsp; RECEIVED +1 → stock ${r.available} <span class="hint">(${r.shopify})</span>`;
+  document.body.appendChild(t); setTimeout(()=>t.remove(), 2500);
 }
 async function inspectVerdict(order, code, verdict){
   try {
