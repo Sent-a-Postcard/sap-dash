@@ -209,7 +209,18 @@ async function receiveTap(design, size){
   t.innerHTML = `✓ ${design} · ${size} &nbsp; RECEIVED +1 → stock ${r.available} <span class="hint">(${r.shopify})</span>`;
   document.body.appendChild(t); setTimeout(()=>t.remove(), 2500);
 }
+let _pendingVerdict = null;
 async function inspectVerdict(order, code, verdict){
+  const key = order+code+verdict;
+  if (_pendingVerdict !== key){
+    _pendingVerdict = key;
+    const btns = document.querySelectorAll(`#insp-${CSS.escape(code)} button`);
+    btns.forEach(b => { if ((b.textContent.includes("THIK") && verdict==="good") || (b.textContent.includes("KHARAB") && verdict==="bad")) b.textContent = "PAKKA? phir se dabao 👆"; });
+    setTimeout(()=>{ if(_pendingVerdict===key){ _pendingVerdict=null;
+      btns.forEach(b => { if (b.textContent.includes("PAKKA")) b.textContent = verdict==="good" ? "✅ THIK HAI" : "✖ KHARAB"; }); } }, 4000);
+    return;
+  }
+  _pendingVerdict = null;
   try {
     const r = await api({action:"inspect_result", order, code, verdict});
     const el = document.getElementById("insp-"+code);
