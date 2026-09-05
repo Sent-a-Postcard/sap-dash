@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2A0D12">
+<title>SAP · Call List</title>
+<style>
+  :root{
+    --bg:#1A0A0E; --bg2:#241016; --card:#2E141B; --line:#3F1F27;
+    --cream:#F2E8D5; --gold:#C9A24B; --mute:#A78E92;
+    --green:#3FB27F; --amber:#E0A33E; --red:#D95C5C;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--cream);
+    font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    padding-bottom:40px}
+  header{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,#2A0D12,#1A0A0E);
+    padding:14px 16px 0;border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}
+  .brand h1{margin:0;font-size:17px;font-weight:700;letter-spacing:.2px}
+  .brand span{font-size:12px;color:var(--mute)}
+  .score{display:flex;gap:8px;margin-bottom:12px}
+  .pill{flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 10px}
+  .pill b{display:block;font-size:19px;line-height:1.1}
+  .pill small{font-size:10.5px;color:var(--mute);text-transform:uppercase;letter-spacing:.5px}
+  .pill.earn b{color:var(--gold)}
+  nav{display:flex;gap:6px}
+  nav button{flex:1;background:none;border:none;color:var(--mute);font:600 14px inherit;
+    padding:11px 4px;border-bottom:2.5px solid transparent;cursor:pointer}
+  nav button.on{color:var(--cream);border-bottom-color:var(--gold)}
+  nav button .n{display:inline-block;min-width:20px;padding:1px 6px;margin-left:5px;border-radius:9px;
+    background:var(--line);font-size:11.5px;color:var(--cream)}
+  nav button.on .n{background:var(--gold);color:#2A0D12}
+  main{padding:14px 14px 0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:14px;margin-bottom:12px;transition:opacity .25s,transform .25s}
+  .card.gone{opacity:0;transform:scale(.96)}
+  .top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+  .who{font-size:17px;font-weight:700;letter-spacing:.1px}
+  .meta{font-size:12.5px;color:var(--mute);margin-top:2px}
+  .amt{font-size:16px;font-weight:700;color:var(--gold);white-space:nowrap}
+  .items{margin:10px 0 0;font-size:13.5px;color:var(--cream);opacity:.92}
+  .why{margin-top:10px;padding:8px 10px;border-radius:10px;background:#3A1A16;
+    font-size:12.5px;color:#F0C9A8}
+  .why b{color:#FFD9B8}
+  .say{margin-top:10px;padding:10px;border-radius:10px;background:#20313A;
+    font-size:13px;color:#CFE5EF;line-height:1.5}
+  .acts{display:flex;gap:8px;margin-top:12px}
+  .acts a{flex:1;text-decoration:none;text-align:center;padding:13px 8px;border-radius:12px;
+    font-weight:700;font-size:15px}
+  .call{background:var(--green);color:#08210f}
+  .wa{background:#25422F;color:#9FE8C0;border:1px solid #2E5A3E}
+  .out{display:flex;gap:7px;margin-top:9px}
+  .out button{flex:1;padding:10px 4px;border-radius:11px;border:1px solid var(--line);
+    background:#200E13;color:var(--cream);font:600 13px inherit;cursor:pointer}
+  .out button:active{transform:scale(.97)}
+  .out .good{border-color:#2E6B4E;color:#8FE3B6}
+  .out .warn{border-color:#6B5320;color:#EBC77C}
+  .out .bad{border-color:#6B2E2E;color:#EFA1A1}
+  .empty{text-align:center;padding:48px 20px;color:var(--mute)}
+  .empty .big{font-size:40px;margin-bottom:10px}
+  .gate{padding:60px 24px;text-align:center}
+  .gate input{width:100%;max-width:320px;padding:13px;border-radius:12px;border:1px solid var(--line);
+    background:var(--card);color:var(--cream);font-size:16px;text-align:center;margin:14px 0}
+  .gate button{padding:13px 30px;border-radius:12px;border:none;background:var(--gold);
+    color:#2A0D12;font:700 15px inherit;cursor:pointer}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:22px;z-index:50;
+    background:var(--gold);color:#2A0D12;padding:11px 20px;border-radius:22px;font-weight:700;
+    font-size:14px;opacity:0;transition:opacity .25s;pointer-events:none;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+  .toast.show{opacity:1}
+  .foot{text-align:center;color:var(--mute);font-size:11.5px;padding:22px 16px}
+</style>
+</head>
+<body>
+<div id="gate" class="gate" hidden>
+  <div style="font-size:34px">🔑</div>
+  <h2 style="font-size:17px;margin:10px 0 0">Sent a Postcard — Call List</h2>
+  <p style="color:var(--mute);font-size:13.5px">Enter your access code (once per phone)</p>
+  <input id="k" placeholder="access code" autocomplete="off">
+  <br><button onclick="saveKey()">Open</button>
+</div>
+
+<div id="app" hidden>
+  <header>
+    <div class="brand">
+      <h1>Call List</h1>
+      <span id="stamp">—</span>
+    </div>
+    <div class="score">
+      <div class="pill"><b id="sConf">0</b><small>Confirmed</small></div>
+      <div class="pill"><b id="sSave">0</b><small>Saved</small></div>
+      <div class="pill earn"><b id="sEarn">₹0</b><small>Bonus today</small></div>
+    </div>
+    <nav>
+      <button id="tabC" class="on" onclick="show('confirm')">Confirm <span class="n" id="nC">0</span></button>
+      <button id="tabR" onclick="show('rescue')">Rescue <span class="n" id="nR">0</span></button>
+    </nav>
+  </header>
+  <main id="list"></main>
+  <div class="foot">Pull down to refresh · numbers are customer-confidential</div>
+</div>
+<div id="toast" class="toast"></div>
+
+<script>
+const API="https://evxogfucxkhjmflxtshl.supabase.co/functions/v1/call-list";
+let KEY=localStorage.getItem("sapCallerKey")||"", DATA={confirm:[],rescue:[]}, TAB="confirm";
+
+function saveKey(){const v=document.getElementById("k").value.trim();if(!v)return;
+  localStorage.setItem("sapCallerKey",v);KEY=v;boot();}
+function toast(m){const t=document.getElementById("toast");t.textContent=m;t.classList.add("show");
+  clearTimeout(t._x);t._x=setTimeout(()=>t.classList.remove("show"),1900);}
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const tel=p=>String(p||"").replace(/[^0-9+]/g,"");
+const wa=p=>{let d=tel(p).replace(/^\+/,"");if(d.length===10)d="91"+d;return d;};
+
+function fresh(iso){if(!iso)return"";const h=Math.round((Date.now()-new Date(iso))/36e5);
+  return h<1?"just now":h<24?h+"h ago":Math.round(h/24)+"d ago";}
+
+function cardConfirm(o){
+  const msg=encodeURIComponent(`Sat sri akal ${o.name} ji, Sent a Postcard ton. Tuhada order ${o.order_number} confirm karna si - ${o.items.join(", ")}, Rs ${o.amount} cash on delivery. Ki assi bhej deiye?`);
+  return `<div class="card" id="c-${esc(o.order_number)}">
+    <div class="top"><div><div class="who">${esc(o.name)}</div>
+      <div class="meta">${esc(o.order_number)} · ${esc(o.city)} · ${fresh(o.placed)}</div></div>
+      <div class="amt">₹${o.amount}</div></div>
+    <div class="items">📦 ${esc(o.items.join(", "))||"—"}</div>
+    <div class="say">Order confirm karo — customer nu dasso kadon pahunchega te cash ready rakhan.</div>
+    <div class="acts">
+      <a class="call" href="tel:${tel(o.phone)}">📞 Call</a>
+      <a class="wa" href="https://wa.me/${wa(o.phone)}?text=${msg}" target="_blank" rel="noopener">WhatsApp</a>
+    </div>
+    <div class="out">
+      <button class="good" onclick="log('${esc(o.order_number)}','confirm','confirmed',this)">✓ Confirmed</button>
+      <button class="warn" onclick="log('${esc(o.order_number)}','confirm','no_answer',this)">No answer</button>
+      <button class="bad"  onclick="log('${esc(o.order_number)}','confirm','cancelled',this)">Cancel</button>
+    </div></div>`;
+}
+function cardRescue(o){
+  const msg=encodeURIComponent(`Sat sri akal ${o.name} ji, Sent a Postcard ton. Tuhada parcel ${o.order_number} delivery layi aaya si par courier tuhanu mil nahi saka. Ki assi kal dubara bhej deiye? "HAAN" likh dena.`);
+  return `<div class="card" id="c-${esc(o.order_number)}">
+    <div class="top"><div><div class="who">${esc(o.name)}</div>
+      <div class="meta">${esc(o.order_number)} · ${esc(o.city)} · flagged ${fresh(o.flagged)}</div></div>
+      <div class="amt">₹${o.amount}</div></div>
+    <div class="why">⚠️ <b>${esc(o.reason||"Delivery failed")}</b> — parcel wapas jaa sakda hai</div>
+    <div class="say">Naya delivery time/address lo. Bacha lya taan <b>₹100 bonus</b>.</div>
+    <div class="acts">
+      <a class="call" href="tel:${tel(o.phone)}">📞 Call now</a>
+      <a class="wa" href="https://wa.me/${wa(o.phone)}?text=${msg}" target="_blank" rel="noopener">WhatsApp</a>
+    </div>
+    <div class="out">
+      <button class="good" onclick="log('${esc(o.order_number)}','rescue','saved',this)">✓ Saved</button>
+      <button class="warn" onclick="log('${esc(o.order_number)}','rescue','no_answer',this)">No answer</button>
+      <button class="bad"  onclick="log('${esc(o.order_number)}','rescue','refused',this)">Refused</button>
+    </div></div>`;
+}
+
+function show(t){TAB=t;
+  document.getElementById("tabC").className=t==="confirm"?"on":"";
+  document.getElementById("tabR").className=t==="rescue"?"on":"";
+  render();}
+
+function render(){
+  const rows=DATA[TAB]||[], el=document.getElementById("list");
+  document.getElementById("nC").textContent=(DATA.confirm||[]).length;
+  document.getElementById("nR").textContent=(DATA.rescue||[]).length;
+  if(!rows.length){el.innerHTML=`<div class="empty"><div class="big">🎉</div>
+    <div><b>All done here</b></div><div style="font-size:13px;margin-top:6px">
+    ${TAB==="confirm"?"Every COD order is confirmed.":"No failed deliveries to rescue."}</div></div>`;return;}
+  el.innerHTML=rows.map(TAB==="confirm"?cardConfirm:cardRescue).join("");
+}
+
+async function log(order,task,outcome,btn){
+  const card=document.getElementById("c-"+order);
+  btn.disabled=true;
+  try{
+    await fetch(API+"?key="+encodeURIComponent(KEY),{method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({order_number:order,task,outcome})});
+    if(card){card.classList.add("gone");setTimeout(()=>card.remove(),260);}
+    DATA[task==="confirm"?"confirm":"rescue"]=DATA[task==="confirm"?"confirm":"rescue"].filter(x=>x.order_number!==order);
+    if(outcome==="saved"){bump("sSave");bumpEarn(100);toast("Saved! +₹100 🎉");}
+    else if(outcome==="confirmed"){bump("sConf");toast("Confirmed ✓");}
+    else toast("Logged");
+    document.getElementById("nC").textContent=(DATA.confirm||[]).length;
+    document.getElementById("nR").textContent=(DATA.rescue||[]).length;
+    if(!(DATA[TAB]||[]).length)render();
+  }catch(e){btn.disabled=false;toast("No internet — try again");}
+}
+function bump(id){const e=document.getElementById(id);e.textContent=(+e.textContent||0)+1;}
+function bumpEarn(n){const e=document.getElementById("sEarn");
+  e.textContent="₹"+((parseInt(e.textContent.replace(/\D/g,""))||0)+n);}
+
+async function boot(){
+  if(!KEY){document.getElementById("gate").hidden=false;document.getElementById("app").hidden=true;return;}
+  try{
+    const r=await fetch(API+"?key="+encodeURIComponent(KEY));
+    if(r.status===401){localStorage.removeItem("sapCallerKey");KEY="";
+      document.getElementById("gate").hidden=false;document.getElementById("app").hidden=true;
+      toast("Wrong code");return;}
+    const d=await r.json();
+    DATA=d;
+    document.getElementById("gate").hidden=true;document.getElementById("app").hidden=false;
+    document.getElementById("sConf").textContent=d.today.confirmed;
+    document.getElementById("sSave").textContent=d.today.saved;
+    document.getElementById("sEarn").textContent="₹"+d.today.earned;
+    document.getElementById("stamp").textContent=new Date(d.generated_at)
+      .toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
+    render();
+  }catch(e){toast("Could not load — check internet");}
+}
+boot();
+setInterval(boot,120000);
+</script>
+</body>
+</html>
