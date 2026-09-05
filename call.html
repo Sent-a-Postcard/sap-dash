@@ -50,8 +50,6 @@
     color:var(--mute);margin-bottom:3px}
   .addr.risk .lbl{color:#F0A870}
   .why b{color:#FFD9B8}
-  .say{margin-top:10px;padding:10px;border-radius:10px;background:#20313A;
-    font-size:13px;color:#CFE5EF;line-height:1.5}
   .acts{display:flex;gap:8px;margin-top:12px}
   .acts a{flex:1;text-decoration:none;text-align:center;padding:13px 8px;border-radius:12px;
     font-weight:700;font-size:15px}
@@ -143,9 +141,6 @@ function cardConfirm(o){
       <div class="amt">₹${o.amount}</div></div>
     <div class="items">📦 ${esc(o.items.join(", "))||"—"}</div>
     ${addrBlock(o)}
-    <div class="say">${(o.addr_flags||[]).length
-      ? "⚠️ <b>Pehlan address confirm karo</b> — ghar da number te landmark puchho, phir order confirm karo."
-      : "Order confirm karo — customer nu dasso kadon pahunchega te cash ready rakhan."}</div>
     <div class="acts">
       <a class="call" href="tel:${tel(o.phone)}">📞 Call</a>
       <a class="wa" href="https://wa.me/${wa(o.phone)}?text=${msg}" target="_blank" rel="noopener">WhatsApp</a>
@@ -163,7 +158,6 @@ function cardRescue(o){
       <div class="meta">${esc(o.order_number)} · ${esc(o.city)} · flagged ${fresh(o.flagged)}</div></div>
       <div class="amt">₹${o.amount}</div></div>
     <div class="why">⚠️ <b>${esc(o.reason||"Delivery failed")}</b> — parcel wapas jaa sakda hai</div>
-    <div class="say">Naya delivery time/address lo. Bacha lya taan <b>₹100 bonus</b>.</div>
     <div class="acts">
       <a class="call" href="tel:${tel(o.phone)}">📞 Call now</a>
       <a class="wa" href="https://wa.me/${wa(o.phone)}?text=${msg}" target="_blank" rel="noopener">WhatsApp</a>
