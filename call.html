@@ -43,6 +43,12 @@
   .items{margin:10px 0 0;font-size:13.5px;color:var(--cream);opacity:.92}
   .why{margin-top:10px;padding:8px 10px;border-radius:10px;background:#3A1A16;
     font-size:12.5px;color:#F0C9A8}
+  .addr{margin-top:9px;padding:9px 10px;border-radius:10px;background:#241118;
+    border:1px solid var(--line);font-size:12.5px;color:#DCC9CE;line-height:1.5}
+  .addr.risk{background:#3E1C14;border-color:#7A3A22;color:#FFD9BE}
+  .addr .lbl{display:block;font-size:10px;letter-spacing:.5px;text-transform:uppercase;
+    color:var(--mute);margin-bottom:3px}
+  .addr.risk .lbl{color:#F0A870}
   .why b{color:#FFD9B8}
   .say{margin-top:10px;padding:10px;border-radius:10px;background:#20313A;
     font-size:13px;color:#CFE5EF;line-height:1.5}
@@ -117,14 +123,29 @@ const wa=p=>{let d=tel(p).replace(/^\+/,"");if(d.length===10)d="91"+d;return d;}
 function fresh(iso){if(!iso)return"";const h=Math.round((Date.now()-new Date(iso))/36e5);
   return h<1?"just now":h<24?h+"h ago":Math.round(h/24)+"d ago";}
 
+const FLAG_TXT={no_house_number:"No house/building number",too_short:"Address too short",
+  junk_text:"Address looks like gibberish",bad_pincode:"Pincode looks wrong"};
+function addrBlock(o){
+  const f=o.addr_flags||[], risky=f.length>0;
+  const why=risky?` — ${f.map(x=>FLAG_TXT[x]||x).join(", ")}`:"";
+  return `<div class="addr ${risky?"risk":""}">
+    <span class="lbl">${risky?"⚠️ Check this address"+esc(why):"Delivery address"}</span>
+    ${esc(o.address||"—")}${o.pincode?", "+esc(o.pincode):""}</div>`;
+}
 function cardConfirm(o){
-  const msg=encodeURIComponent(`Sat sri akal ${o.name} ji, Sent a Postcard ton. Tuhada order ${o.order_number} confirm karna si - ${o.items.join(", ")}, Rs ${o.amount} cash on delivery. Ki assi bhej deiye?`);
+  const risky=(o.addr_flags||[]).length>0;
+  const msg=encodeURIComponent(risky
+    ? `Sat sri akal ${o.name} ji, Sent a Postcard ton. Tuhada order ${o.order_number} (${o.items.join(", ")}, Rs ${o.amount} COD) confirm karna si. Saade kol eh address hai:\n\n${o.address}, ${o.pincode}\n\nGhar da number te koi landmark v bhej dena taan ki parcel sahi pahunche 🙏`
+    : `Sat sri akal ${o.name} ji, Sent a Postcard ton. Tuhada order ${o.order_number} confirm karna si - ${o.items.join(", ")}, Rs ${o.amount} cash on delivery. Ki assi bhej deiye?`);
   return `<div class="card" id="c-${esc(o.order_number)}">
     <div class="top"><div><div class="who">${esc(o.name)}</div>
       <div class="meta">${esc(o.order_number)} · ${esc(o.city)} · ${fresh(o.placed)}</div></div>
       <div class="amt">₹${o.amount}</div></div>
     <div class="items">📦 ${esc(o.items.join(", "))||"—"}</div>
-    <div class="say">Order confirm karo — customer nu dasso kadon pahunchega te cash ready rakhan.</div>
+    ${addrBlock(o)}
+    <div class="say">${(o.addr_flags||[]).length
+      ? "⚠️ <b>Pehlan address confirm karo</b> — ghar da number te landmark puchho, phir order confirm karo."
+      : "Order confirm karo — customer nu dasso kadon pahunchega te cash ready rakhan."}</div>
     <div class="acts">
       <a class="call" href="tel:${tel(o.phone)}">📞 Call</a>
       <a class="wa" href="https://wa.me/${wa(o.phone)}?text=${msg}" target="_blank" rel="noopener">WhatsApp</a>
