@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2A0D12">
+<title>SAP · Orders</title>
+<style>
+  :root{
+    --bg:#160A0D; --panel:#231016; --card:#2C141A; --line:#3D1F27; --line2:#4A2830;
+    --cream:#F2E8D5; --gold:#C9A24B; --mute:#A08A8E;
+    --green:#3FB27F; --amber:#E0A33E; --red:#D95C5C; --blue:#6FA8D0;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--cream);
+    font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  header{position:sticky;top:0;z-index:30;background:#1E0C11;border-bottom:1px solid var(--line);
+    padding:12px 14px 0}
+  .row1{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .row1 h1{margin:0;font-size:17px;font-weight:700}
+  .row1 a{color:var(--gold);font-size:12.5px;text-decoration:none;font-weight:600}
+  .stats{display:flex;gap:7px;margin:11px 0}
+  .st{flex:1;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:7px 9px;min-width:0}
+  .st b{display:block;font-size:16px;line-height:1.15}
+  .st small{font-size:10px;color:var(--mute);text-transform:uppercase;letter-spacing:.4px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+  .search{position:relative;margin-bottom:10px}
+  .search input{width:100%;padding:11px 12px 11px 34px;border-radius:11px;border:1px solid var(--line);
+    background:var(--panel);color:var(--cream);font-size:15px}
+  .search span{position:absolute;left:11px;top:10px;opacity:.5}
+  .chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{white-space:nowrap;padding:6px 12px;border-radius:16px;border:1px solid var(--line);
+    background:var(--panel);color:var(--mute);font-size:12.5px;font-weight:600;cursor:pointer}
+  .chip.on{background:var(--gold);border-color:var(--gold);color:#2A0D12}
+  main{padding:12px 14px 40px}
+  .o{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:12px;
+    margin-bottom:9px;cursor:pointer}
+  .o:active{border-color:var(--line2)}
+  .oh{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+  .onum{font-size:12.5px;color:var(--gold);font-weight:700;letter-spacing:.3px}
+  .oamt{font-size:15px;font-weight:700}
+  .oname{font-size:15.5px;font-weight:600;margin-top:3px}
+  .ometa{font-size:12px;color:var(--mute);margin-top:2px}
+  .oitems{font-size:12.5px;margin-top:7px;opacity:.9}
+  .tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+  .t{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:6px;letter-spacing:.3px}
+  .t.cod{background:#4A3416;color:#F0CE8A}
+  .t.pre{background:#1C3D2C;color:#8FE3B6}
+  .t.new{background:#3A2338;color:#E0B6DE}
+  .t.disp{background:#1F3547;color:#A6D2F0}
+  .t.del{background:#1C3D2C;color:#8FE3B6}
+  .t.rto{background:#4A1F1F;color:#F0A8A8}
+  .t.ndr{background:#4A2A16;color:#F0BE8A}
+  .empty{text-align:center;color:var(--mute);padding:50px 20px}
+  /* detail sheet */
+  .sheet{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.6);display:none}
+  .sheet.on{display:block}
+  .sheetin{position:absolute;left:0;right:0;bottom:0;max-height:92vh;overflow:auto;
+    background:var(--panel);border-radius:18px 18px 0 0;border-top:1px solid var(--line2)}
+  .sh{position:sticky;top:0;background:var(--panel);padding:14px 16px 10px;
+    border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+  .sh b{font-size:16px}
+  .sh button{background:none;border:none;color:var(--mute);font-size:24px;cursor:pointer;line-height:1}
+  .sb{padding:14px 16px 30px}
+  .sec{margin-bottom:16px}
+  .sec h4{margin:0 0 7px;font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.6px}
+  .box{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:11px}
+  .kv{display:flex;justify-content:space-between;gap:12px;padding:4px 0;font-size:13.5px}
+  .kv span:first-child{color:var(--mute)}
+  .kv span:last-child{text-align:right}
+  .li{display:flex;justify-content:space-between;padding:6px 0;font-size:13.5px;
+    border-bottom:1px solid var(--line)}
+  .li:last-child{border:none}
+  .actions{display:flex;gap:8px;margin:12px 0}
+  .actions a{flex:1;text-align:center;padding:12px;border-radius:11px;text-decoration:none;
+    font-weight:700;font-size:14.5px}
+  .ac{background:var(--green);color:#08210f}
+  .aw{background:#25422F;color:#9FE8C0;border:1px solid #2E5A3E}
+  .scan{font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--line);display:flex;
+    justify-content:space-between;gap:10px}
+  .scan:last-child{border:none}
+  .scan span:last-child{color:var(--mute);white-space:nowrap;font-size:11.5px}
+  .gate{padding:60px 24px;text-align:center}
+  .gate input{width:100%;max-width:320px;padding:13px;border-radius:12px;border:1px solid var(--line);
+    background:var(--card);color:var(--cream);font-size:16px;text-align:center;margin:14px 0}
+  .gate button{padding:13px 30px;border-radius:12px;border:none;background:var(--gold);
+    color:#2A0D12;font:700 15px inherit;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="gate" class="gate" hidden>
+  <div style="font-size:34px">🔑</div>
+  <h2 style="font-size:17px;margin:10px 0 0">Sent a Postcard — Orders</h2>
+  <p style="color:var(--mute);font-size:13.5px">Enter access code (once per device)</p>
+  <input id="k" placeholder="access code" autocomplete="off">
+  <br><button onclick="saveKey()">Open</button>
+</div>
+
+<div id="app" hidden>
+  <header>
+    <div class="row1"><h1>Orders</h1><a href="./call.html">Call list →</a></div>
+    <div class="stats">
+      <div class="st"><b id="s1">0</b><small>Today</small></div>
+      <div class="st"><b id="s2">0</b><small>To ship</small></div>
+      <div class="st"><b id="s3">0</b><small>In transit</small></div>
+      <div class="st"><b id="s4">0</b><small>Problems</small></div>
+    </div>
+    <div class="search"><span>🔍</span>
+      <input id="q" placeholder="Name, order no, phone, city…" oninput="render()"></div>
+    <div class="chips" id="chips"></div>
+  </header>
+  <main id="list"></main>
+</div>
+
+<div class="sheet" id="sheet" onclick="if(event.target===this)closeSheet()">
+  <div class="sheetin">
+    <div class="sh"><b id="shTitle">—</b><button onclick="closeSheet()">×</button></div>
+    <div class="sb" id="shBody">Loading…</div>
+  </div>
+</div>
+
+<script>
+const API="https://evxogfucxkhjmflxtshl.supabase.co/functions/v1/orders-api";
+let KEY=localStorage.getItem("sapCallerKey")||"", ORDERS=[], FILTER="all";
+const FILTERS=[["all","All"],["today","Today"],["toship","To ship"],["transit","In transit"],
+               ["problem","Problems"],["cod","COD"],["prepaid","Prepaid"],["delivered","Delivered"]];
+
+function saveKey(){const v=document.getElementById("k").value.trim();if(!v)return;
+  localStorage.setItem("sapCallerKey",v);KEY=v;boot();}
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const tel=p=>String(p||"").replace(/[^0-9+]/g,"");
+const wa=p=>{let d=tel(p).replace(/^\+/,"");if(d.length===10)d="91"+d;return d;};
+const isToday=iso=>new Date(iso).toDateString()===new Date().toDateString();
+function ago(iso){if(!iso)return"";const h=(Date.now()-new Date(iso))/36e5;
+  return h<1?Math.max(1,Math.round(h*60))+"m":h<24?Math.round(h)+"h":Math.round(h/24)+"d";}
+const isProblem=o=>o.ndr||(o.delivery||"").startsWith("RTO")||o.delivery==="Not Picked";
+const inTransit=o=>["In Transit","Dispatched","Manifested","Pending","Out for delivery"].includes(o.delivery);
+const toShip=o=>!o.awb&&!["CANCELLED","DELIVERED","RTO"].includes(o.status);
+
+function match(o){
+  const q=document.getElementById("q").value.trim().toLowerCase();
+  if(q&&!(`${o.order_number} ${o.name} ${o.phone} ${o.city} ${o.items.join(" ")}`.toLowerCase().includes(q)))return false;
+  if(FILTER==="today")return isToday(o.placed);
+  if(FILTER==="toship")return toShip(o);
+  if(FILTER==="transit")return inTransit(o);
+  if(FILTER==="problem")return isProblem(o);
+  if(FILTER==="cod")return o.mode==="COD";
+  if(FILTER==="prepaid")return o.mode==="PREPAID";
+  if(FILTER==="delivered")return o.delivery==="Delivered";
+  return true;
+}
+function tagsFor(o){
+  let t=`<span class="t ${o.mode==="COD"?"cod":"pre"}">${o.mode}</span>`;
+  if(o.ndr)t+=`<span class="t ndr">⚠ ${esc(o.ndr).slice(0,26)}</span>`;
+  else if((o.delivery||"").startsWith("RTO"))t+=`<span class="t rto">RTO</span>`;
+  else if(o.delivery==="Delivered")t+=`<span class="t del">Delivered</span>`;
+  else if(o.delivery)t+=`<span class="t disp">${esc(o.delivery)}</span>`;
+  else t+=`<span class="t new">Not shipped</span>`;
+  return t;
+}
+function render(){
+  const rows=ORDERS.filter(match), el=document.getElementById("list");
+  document.getElementById("chips").innerHTML=FILTERS.map(([k,l])=>
+    `<div class="chip ${FILTER===k?"on":""}" onclick="setF('${k}')">${l}</div>`).join("");
+  if(!rows.length){el.innerHTML='<div class="empty">No orders match</div>';return;}
+  el.innerHTML=rows.slice(0,150).map(o=>`
+    <div class="o" onclick="openOrder('${esc(o.order_number)}')">
+      <div class="oh"><div class="onum">${esc(o.order_number)}</div><div class="oamt">₹${o.amount}</div></div>
+      <div class="oname">${esc(o.name)}</div>
+      <div class="ometa">${esc(o.city)}${o.state?", "+esc(o.state):""} · ${ago(o.placed)} ago</div>
+      <div class="oitems">📦 ${esc(o.items.join(", "))||"—"}</div>
+      <div class="tags">${tagsFor(o)}</div>
+    </div>`).join("")
+    + (rows.length>150?`<div class="empty">+${rows.length-150} more — use search</div>`:"");
+}
+function setF(k){FILTER=k;render();window.scrollTo({top:0,behavior:"smooth"});}
+
+async function openOrder(num){
+  const s=document.getElementById("sheet");
+  s.classList.add("on");
+  document.getElementById("shTitle").textContent=num;
+  document.getElementById("shBody").innerHTML="Loading…";
+  try{
+    const r=await fetch(`${API}?key=${encodeURIComponent(KEY)}&order=${encodeURIComponent(num.replace("#",""))}`);
+    const d=await r.json();
+    if(d.error){document.getElementById("shBody").textContent=d.error;return;}
+    const o=d.order;
+    const items=(o.items||[]).map(i=>`<div class="li"><span>${esc(i.skus?.name||"item")}${i.qty>1?" ×"+i.qty:""}</span><span>₹${Math.round(i.price)}</span></div>`).join("")||"—";
+    const ships=(o.shipments||[]).map(sh=>`<div class="li"><span>${sh.direction==="REVERSE"?"↩︎ Return":"→ Forward"} · ${esc(sh.awb)}</span><span>${esc(sh.current_status||"")}</span></div>`).join("")||'<div style="color:var(--mute);font-size:13px">Not shipped yet</div>';
+    const scans=(o.scans||[]).slice(0,12).map(sc=>`<div class="scan"><span>${esc(sc.status_text)}${sc.location?" · "+esc(sc.location):""}</span><span>${new Date(sc.scan_at).toLocaleString("en-IN",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})}</span></div>`).join("")||'<div style="color:var(--mute);font-size:13px">No scans yet</div>';
+    const calls=(o.calls||[]).map(c=>`<div class="scan"><span>${esc(c.task)} — <b>${esc(c.outcome)}</b></span><span>${new Date(c.created_at).toLocaleDateString("en-IN",{day:"2-digit",month:"short"})}</span></div>`).join("");
+    document.getElementById("shBody").innerHTML=`
+      <div class="actions">
+        <a class="ac" href="tel:${tel(o.phone)}">📞 Call</a>
+        <a class="aw" href="https://wa.me/${wa(o.phone)}" target="_blank" rel="noopener">WhatsApp</a>
+      </div>
+      <div class="sec"><h4>Customer</h4><div class="box">
+        <div class="kv"><span>Name</span><span>${esc(o.customer_name)}</span></div>
+        <div class="kv"><span>Phone</span><span>${esc(o.phone)}</span></div>
+        <div class="kv"><span>City</span><span>${esc(o.city)}, ${esc(o.state)} ${esc(o.pincode||"")}</span></div>
+      </div></div>
+      <div class="sec"><h4>Order</h4><div class="box">
+        ${items}
+        <div class="kv" style="margin-top:8px;border-top:1px solid var(--line);padding-top:8px">
+          <span>Total (${esc(o.payment_mode)})</span><span style="font-weight:700;color:var(--gold)">₹${Math.round(o.total)}</span></div>
+        <div class="kv"><span>Placed</span><span>${new Date(o.created_at).toLocaleString("en-IN",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})}</span></div>
+        <div class="kv"><span>Status</span><span>${esc(o.status)}</span></div>
+      </div></div>
+      <div class="sec"><h4>Parcels</h4><div class="box">${ships}</div></div>
+      <div class="sec"><h4>Tracking</h4><div class="box">${scans}</div></div>
+      ${calls?`<div class="sec"><h4>Call history</h4><div class="box">${calls}</div></div>`:""}`;
+  }catch(e){document.getElementById("shBody").textContent="Could not load — check internet";}
+}
+function closeSheet(){document.getElementById("sheet").classList.remove("on");}
+
+async function boot(){
+  if(!KEY){document.getElementById("gate").hidden=false;document.getElementById("app").hidden=true;return;}
+  try{
+    const r=await fetch(API+"?key="+encodeURIComponent(KEY));
+    if(r.status===401){localStorage.removeItem("sapCallerKey");KEY="";
+      document.getElementById("gate").hidden=false;document.getElementById("app").hidden=true;return;}
+    const d=await r.json();
+    ORDERS=d.orders||[];
+    document.getElementById("gate").hidden=true;document.getElementById("app").hidden=false;
+    document.getElementById("s1").textContent=ORDERS.filter(o=>isToday(o.placed)).length;
+    document.getElementById("s2").textContent=ORDERS.filter(toShip).length;
+    document.getElementById("s3").textContent=ORDERS.filter(inTransit).length;
+    document.getElementById("s4").textContent=ORDERS.filter(isProblem).length;
+    render();
+  }catch(e){document.getElementById("list").innerHTML='<div class="empty">Could not load — check internet</div>';}
+}
+boot();
+setInterval(boot,180000);
+</script>
+</body>
+</html>
